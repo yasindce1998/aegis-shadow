@@ -1,7 +1,6 @@
 use common::{
-    DefenseAlert,
-    ALERT_GHOST_MAP, ALERT_SYSCALL_LATENCY, ALERT_BYTECODE_TAMPER,
-    ALERT_HIDDEN_PROCESS, ALERT_SUSPICIOUS_HOOK,
+    DefenseAlert, ALERT_BYTECODE_TAMPER, ALERT_GHOST_MAP, ALERT_HIDDEN_PROCESS,
+    ALERT_SUSPICIOUS_HOOK, ALERT_SYSCALL_LATENCY,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap as StdHashMap;
@@ -107,8 +106,14 @@ pub fn classify_severity(severity: u32) -> &'static str {
 pub fn format_alert_details(alert: &DefenseAlert) -> String {
     if alert.alert_type == ALERT_SYSCALL_LATENCY {
         let latency_ns = u64::from_le_bytes([
-            alert.details[0], alert.details[1], alert.details[2], alert.details[3],
-            alert.details[4], alert.details[5], alert.details[6], alert.details[7],
+            alert.details[0],
+            alert.details[1],
+            alert.details[2],
+            alert.details[3],
+            alert.details[4],
+            alert.details[5],
+            alert.details[6],
+            alert.details[7],
         ]);
         format!("syscall={}, latency={}ns", alert.context, latency_ns)
     } else {

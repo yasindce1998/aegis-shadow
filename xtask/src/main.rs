@@ -47,7 +47,8 @@ fn build_ebpf(release: bool) -> Result<()> {
         .arg("build")
         .arg("--package=offense-ebpf")
         .arg("--target=bpfel-unknown-none")
-        .arg("-Z").arg("build-std=core");
+        .arg("-Z")
+        .arg("build-std=core");
     if release {
         cmd.arg("--release");
     }
@@ -64,7 +65,8 @@ fn build_ebpf(release: bool) -> Result<()> {
         .arg("build")
         .arg("--package=defense-ebpf")
         .arg("--target=bpfel-unknown-none")
-        .arg("-Z").arg("build-std=core");
+        .arg("-Z")
+        .arg("build-std=core");
     if release {
         cmd.arg("--release");
     }

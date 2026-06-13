@@ -77,8 +77,10 @@ jobs:
         run: cargo build --package offense --features ebpf-bin
       - name: Build defense
         run: cargo build --package defense --features ebpf-bin
-      - name: Clippy
-        run: cargo clippy --package offense --package defense --features ebpf-bin -- -D warnings
+      - name: Clippy offense
+        run: cargo clippy --package offense --features ebpf-bin -- -D warnings
+      - name: Clippy defense
+        run: cargo clippy --package defense --features ebpf-bin -- -D warnings
 
   test:
     name: Integration tests

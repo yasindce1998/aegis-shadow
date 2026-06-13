@@ -1,11 +1,10 @@
 use common::{
-    DefenseAlert,
-    ALERT_GHOST_MAP, ALERT_SYSCALL_LATENCY, ALERT_BYTECODE_TAMPER,
-    ALERT_HIDDEN_PROCESS, ALERT_SUSPICIOUS_HOOK,
+    DefenseAlert, ALERT_BYTECODE_TAMPER, ALERT_GHOST_MAP, ALERT_HIDDEN_PROCESS,
+    ALERT_SUSPICIOUS_HOOK, ALERT_SYSCALL_LATENCY,
 };
 use defense::{
-    DefenseEngine, AlertRecord, classify_alert_type, classify_severity,
-    format_alert_details, make_defense_alert, make_latency_alert,
+    classify_alert_type, classify_severity, format_alert_details, make_defense_alert,
+    make_latency_alert, AlertRecord, DefenseEngine,
 };
 use std::io::Read;
 use tempfile::NamedTempFile;
@@ -15,10 +14,22 @@ use tempfile::NamedTempFile;
 #[test]
 fn test_classify_all_alert_types() {
     assert_eq!(classify_alert_type(ALERT_GHOST_MAP), "Ghost Map Detected");
-    assert_eq!(classify_alert_type(ALERT_SYSCALL_LATENCY), "Syscall Latency Anomaly");
-    assert_eq!(classify_alert_type(ALERT_BYTECODE_TAMPER), "Bytecode Tampering");
-    assert_eq!(classify_alert_type(ALERT_HIDDEN_PROCESS), "Hidden Process Detected");
-    assert_eq!(classify_alert_type(ALERT_SUSPICIOUS_HOOK), "Suspicious Hook Detected");
+    assert_eq!(
+        classify_alert_type(ALERT_SYSCALL_LATENCY),
+        "Syscall Latency Anomaly"
+    );
+    assert_eq!(
+        classify_alert_type(ALERT_BYTECODE_TAMPER),
+        "Bytecode Tampering"
+    );
+    assert_eq!(
+        classify_alert_type(ALERT_HIDDEN_PROCESS),
+        "Hidden Process Detected"
+    );
+    assert_eq!(
+        classify_alert_type(ALERT_SUSPICIOUS_HOOK),
+        "Suspicious Hook Detected"
+    );
     assert_eq!(classify_alert_type(999), "Unknown Alert");
 }
 

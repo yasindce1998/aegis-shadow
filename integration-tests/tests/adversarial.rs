@@ -1,16 +1,10 @@
 use common::{
-    EventHeader,
-    ALERT_GHOST_MAP, ALERT_SYSCALL_LATENCY, ALERT_BYTECODE_TAMPER,
-    ALERT_HIDDEN_PROCESS, ALERT_SUSPICIOUS_HOOK,
-    EVENT_PROC_HIDDEN, EVENT_PACKET_INTERCEPTED, EVENT_FILE_OBFUSCATED,
-    EVENT_ANTI_DETACH, EVENT_TIMESTOMPED, EVENT_DNS_EXFIL,
+    EventHeader, ALERT_BYTECODE_TAMPER, ALERT_GHOST_MAP, ALERT_HIDDEN_PROCESS,
+    ALERT_SUSPICIOUS_HOOK, ALERT_SYSCALL_LATENCY, EVENT_ANTI_DETACH, EVENT_DNS_EXFIL,
+    EVENT_FILE_OBFUSCATED, EVENT_PACKET_INTERCEPTED, EVENT_PROC_HIDDEN, EVENT_TIMESTOMPED,
 };
-use defense::{
-    DefenseEngine, make_defense_alert, make_latency_alert,
-};
-use offense::{
-    classify_event, make_rootkit_config, EventClassification,
-};
+use defense::{make_defense_alert, make_latency_alert, DefenseEngine};
+use offense::{classify_event, make_rootkit_config, EventClassification};
 
 // ─── Scenario: Offense hides a process, defense detects it ────────
 
@@ -23,7 +17,10 @@ fn test_offense_hide_pid_triggers_defense_alert() {
         context: 0,
     };
     let classification = classify_event(&offense_event);
-    assert_eq!(classification, EventClassification::ProcessHidden { pid: 1337 });
+    assert_eq!(
+        classification,
+        EventClassification::ProcessHidden { pid: 1337 }
+    );
 
     let mut engine = DefenseEngine::new(None, 1).unwrap();
     let defense_alert = make_defense_alert(ALERT_HIDDEN_PROCESS, 4, 1337, 1_000_100, 0);
@@ -108,12 +105,42 @@ fn test_full_attack_chain_detection() {
     let offense_pid = 1337u32;
 
     let offense_events = vec![
-        EventHeader { event_type: EVENT_PROC_HIDDEN, pid: offense_pid, timestamp_ns: 100, context: 0 },
-        EventHeader { event_type: EVENT_PACKET_INTERCEPTED, pid: 1, timestamp_ns: 200, context: 53 },
-        EventHeader { event_type: EVENT_FILE_OBFUSCATED, pid: offense_pid, timestamp_ns: 300, context: 12345 },
-        EventHeader { event_type: EVENT_ANTI_DETACH, pid: offense_pid, timestamp_ns: 400, context: 2 },
-        EventHeader { event_type: EVENT_TIMESTOMPED, pid: offense_pid, timestamp_ns: 500, context: 67890 },
-        EventHeader { event_type: EVENT_DNS_EXFIL, pid: offense_pid, timestamp_ns: 600, context: 1 },
+        EventHeader {
+            event_type: EVENT_PROC_HIDDEN,
+            pid: offense_pid,
+            timestamp_ns: 100,
+            context: 0,
+        },
+        EventHeader {
+            event_type: EVENT_PACKET_INTERCEPTED,
+            pid: 1,
+            timestamp_ns: 200,
+            context: 53,
+        },
+        EventHeader {
+            event_type: EVENT_FILE_OBFUSCATED,
+            pid: offense_pid,
+            timestamp_ns: 300,
+            context: 12345,
+        },
+        EventHeader {
+            event_type: EVENT_ANTI_DETACH,
+            pid: offense_pid,
+            timestamp_ns: 400,
+            context: 2,
+        },
+        EventHeader {
+            event_type: EVENT_TIMESTOMPED,
+            pid: offense_pid,
+            timestamp_ns: 500,
+            context: 67890,
+        },
+        EventHeader {
+            event_type: EVENT_DNS_EXFIL,
+            pid: offense_pid,
+            timestamp_ns: 600,
+            context: 1,
+        },
     ];
 
     for event in &offense_events {
@@ -208,13 +235,7 @@ fn test_rapid_fire_alerts_all_processed() {
     let mut engine = DefenseEngine::new(None, 1).unwrap();
 
     for i in 0..100 {
-        let alert = make_defense_alert(
-            ALERT_GHOST_MAP,
-            2,
-            1337,
-            i as u64,
-            i as u64,
-        );
+        let alert = make_defense_alert(ALERT_GHOST_MAP, 2, 1337, i as u64, i as u64);
         engine.process_alert(&alert);
     }
 

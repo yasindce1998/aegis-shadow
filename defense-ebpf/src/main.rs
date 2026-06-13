@@ -2,15 +2,14 @@
 #![no_main]
 
 use aya_ebpf::{
+    helpers::{bpf_get_current_pid_tgid, bpf_ktime_get_ns},
     macros::{kprobe, map, tracepoint},
     maps::{HashMap, PerfEventArray},
     programs::{ProbeContext, TracePointContext},
-    helpers::{bpf_get_current_pid_tgid, bpf_ktime_get_ns},
 };
 use common::{
-    DefenseAlert, LatencyBaseline,
-    ALERT_GHOST_MAP, ALERT_SYSCALL_LATENCY, ALERT_BYTECODE_TAMPER,
-    ALERT_HIDDEN_PROCESS, ALERT_SUSPICIOUS_HOOK,
+    DefenseAlert, LatencyBaseline, ALERT_BYTECODE_TAMPER, ALERT_GHOST_MAP, ALERT_HIDDEN_PROCESS,
+    ALERT_SUSPICIOUS_HOOK, ALERT_SYSCALL_LATENCY,
 };
 
 // ──────────────────────────────────────────────
@@ -57,9 +56,7 @@ pub fn detect_ghost_map(ctx: TracePointContext) -> u32 {
 }
 
 fn try_detect_ghost_map(ctx: &TracePointContext) -> Result<u32, i64> {
-    let cmd: u32 = unsafe {
-        ctx.read_at(16).map_err(|_| 1i64)?
-    };
+    let cmd: u32 = unsafe { ctx.read_at(16).map_err(|_| 1i64)? };
 
     if cmd != BPF_MAP_CREATE && cmd != BPF_MAP_DELETE {
         return Ok(0);
@@ -147,9 +144,7 @@ fn try_monitor_syscall_exit(ctx: &TracePointContext) -> Result<u32, i64> {
     let exit_ts = unsafe { bpf_ktime_get_ns() };
     let latency_ns = exit_ts.saturating_sub(entry_ts);
 
-    let syscall_nr: u32 = unsafe {
-        ctx.read_at(8).unwrap_or(0)
-    };
+    let syscall_nr: u32 = unsafe { ctx.read_at(8).unwrap_or(0) };
 
     if let Some(baseline) = unsafe { LATENCY_BASELINE.get(&syscall_nr) } {
         let baseline_avg = baseline.avg_latency_ns;
@@ -200,9 +195,7 @@ pub fn check_bytecode_integrity(ctx: TracePointContext) -> u32 {
 }
 
 fn try_check_bytecode_integrity(ctx: &TracePointContext) -> Result<u32, i64> {
-    let cmd: u32 = unsafe {
-        ctx.read_at(16).map_err(|_| 1i64)?
-    };
+    let cmd: u32 = unsafe { ctx.read_at(16).map_err(|_| 1i64)? };
 
     if cmd != BPF_PROG_LOAD {
         return Ok(0);
@@ -301,9 +294,7 @@ pub fn detect_suspicious_hook(ctx: TracePointContext) -> u32 {
 }
 
 fn try_detect_suspicious_hook(ctx: &TracePointContext) -> Result<u32, i64> {
-    let cmd: u32 = unsafe {
-        ctx.read_at(16).map_err(|_| 1i64)?
-    };
+    let cmd: u32 = unsafe { ctx.read_at(16).map_err(|_| 1i64)? };
 
     if cmd != BPF_PROG_ATTACH && cmd != BPF_RAW_TRACEPOINT_OPEN {
         return Ok(0);
@@ -314,7 +305,9 @@ fn try_detect_suspicious_hook(ctx: &TracePointContext) -> Result<u32, i64> {
 
     // Track attachment count per command type
     let key = cmd as u64 | ((pid as u64) << 32);
-    let count = unsafe { KPROBE_ATTACH_COUNTS.get(&key) }.copied().unwrap_or(0);
+    let count = unsafe { KPROBE_ATTACH_COUNTS.get(&key) }
+        .copied()
+        .unwrap_or(0);
     let new_count = count + 1;
     let _ = KPROBE_ATTACH_COUNTS.insert(&key, &new_count, 0);
 

@@ -1,13 +1,12 @@
 use common::{
-    EventHeader, CredentialCapture, TimestompEntry, RootkitConfig,
-    EVENT_PROC_HIDDEN, EVENT_PACKET_INTERCEPTED, EVENT_FILE_OBFUSCATED,
-    EVENT_LOG_TAMPERED, EVENT_ANCESTRY_SPOOFED, EVENT_DNS_EXFIL,
-    EVENT_KALLSYMS_HIDDEN, EVENT_ANTI_DETACH, EVENT_TIMESTOMPED,
-    EVENT_C2_AUTH_FAILED, EVENT_TELEMETRY_MUTED,
+    CredentialCapture, EventHeader, RootkitConfig, TimestompEntry, EVENT_ANCESTRY_SPOOFED,
+    EVENT_ANTI_DETACH, EVENT_C2_AUTH_FAILED, EVENT_DNS_EXFIL, EVENT_FILE_OBFUSCATED,
+    EVENT_KALLSYMS_HIDDEN, EVENT_LOG_TAMPERED, EVENT_PACKET_INTERCEPTED, EVENT_PROC_HIDDEN,
+    EVENT_TELEMETRY_MUTED, EVENT_TIMESTOMPED,
 };
 use offense::{
-    classify_event, parse_tty_device, parse_spoof_ppid, parse_timestomp,
-    make_rootkit_config, tty_dev_key, credential_data, EventClassification,
+    classify_event, credential_data, make_rootkit_config, parse_spoof_ppid, parse_timestomp,
+    parse_tty_device, tty_dev_key, EventClassification,
 };
 
 // ─── TTY Device Parsing ───────────────────────────────────────────
@@ -121,7 +120,10 @@ fn test_classify_packet_intercepted() {
     };
     assert_eq!(
         classify_event(&event),
-        EventClassification::PacketIntercepted { cmd_type: 5, arg: 42 }
+        EventClassification::PacketIntercepted {
+            cmd_type: 5,
+            arg: 42
+        }
     );
 }
 
@@ -135,7 +137,10 @@ fn test_classify_file_obfuscated() {
     };
     assert_eq!(
         classify_event(&event),
-        EventClassification::FileObfuscated { pid: 100, inode: 999 }
+        EventClassification::FileObfuscated {
+            pid: 100,
+            inode: 999
+        }
     );
 }
 

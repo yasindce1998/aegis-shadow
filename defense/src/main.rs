@@ -3,14 +3,14 @@ use aya::{
     include_bytes_aligned,
     maps::AsyncPerfEventArray,
     programs::{KProbe, TracePoint},
-    Ebpf, Btf,
+    Btf, Ebpf,
 };
 use aya_log::EbpfLogger;
 use bytes::BytesMut;
 use clap::Parser;
 use common::DefenseAlert;
 use defense::DefenseEngine;
-use log::{info, warn, error};
+use log::{error, info, warn};
 use tokio::signal;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, Duration};
@@ -60,14 +60,13 @@ struct Cli {
     calibration_period: u64,
 }
 
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(
-        if cli.verbose { "debug" } else { "info" }
-    ))
+    env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or(if cli.verbose { "debug" } else { "info" }),
+    )
     .init();
 
     let rlim = libc::rlimit {
@@ -107,7 +106,13 @@ async fn main() -> Result<()> {
     let enable_hidden = enable_all || cli.hidden_process;
     let enable_hooks = enable_all || cli.suspicious_hooks;
 
-    if !enable_all && !enable_ghost && !enable_latency && !enable_bytecode && !enable_hidden && !enable_hooks {
+    if !enable_all
+        && !enable_ghost
+        && !enable_latency
+        && !enable_bytecode
+        && !enable_hidden
+        && !enable_hooks
+    {
         warn!("No detection modules enabled. Use --all-modules or enable specific modules.");
         return Ok(());
     }
@@ -137,7 +142,10 @@ async fn main() -> Result<()> {
         syscall_exit.load()?;
         syscall_exit.attach("raw_syscalls", "sys_exit")?;
         info!("Module 2: Syscall Latency Monitoring enabled");
-        info!("Calibrating baseline for {} seconds...", cli.calibration_period);
+        info!(
+            "Calibrating baseline for {} seconds...",
+            cli.calibration_period
+        );
     }
 
     if enable_bytecode {
@@ -176,7 +184,8 @@ async fn main() -> Result<()> {
 
     // Spawn per-CPU perf event readers
     let mut perf_array = AsyncPerfEventArray::try_from(
-        bpf.take_map("DEFENSE_ALERTS").context("DEFENSE_ALERTS map not found")?
+        bpf.take_map("DEFENSE_ALERTS")
+            .context("DEFENSE_ALERTS map not found")?,
     )?;
 
     let cpus = aya::util::online_cpus().unwrap_or_else(|_| vec![0]);
