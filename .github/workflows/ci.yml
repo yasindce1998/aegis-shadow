@@ -32,6 +32,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ebpf
+      - name: Install bpf-linker
+        run: cargo install bpf-linker
       - name: Build offense-ebpf
         run: |
           cargo +nightly build --package offense-ebpf \
