@@ -104,6 +104,10 @@ struct Cli {
     /// Path to runtime config file (JSON, hot-reloaded every 5s)
     #[arg(long)]
     config: Option<String>,
+
+    /// Stream alerts as NDJSON to stdout (for TUI bridge)
+    #[arg(long)]
+    json_stdout: bool,
 }
 
 const HONEYPOT_PIN_DIR: &str = "/sys/fs/bpf/honeypot";
@@ -164,15 +168,23 @@ fn contain_process(pid: u32) -> Result<()> {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| {
-                    tracing_subscriber::EnvFilter::new(if cli.verbose { "debug" } else { "info" })
-                }),
-        )
-        .with_target(false)
-        .init();
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| {
+            tracing_subscriber::EnvFilter::new(if cli.verbose { "debug" } else { "info" })
+        });
+
+    if cli.json_stdout {
+        tracing_subscriber::fmt()
+            .with_env_filter(env_filter)
+            .with_target(false)
+            .with_writer(std::io::stderr)
+            .init();
+    } else {
+        tracing_subscriber::fmt()
+            .with_env_filter(env_filter)
+            .with_target(false)
+            .init();
+    }
 
     let rlim = libc::rlimit {
         rlim_cur: libc::RLIM_INFINITY,
@@ -463,6 +475,12 @@ async fn main() -> Result<()> {
         tokio::select! {
             Some(alert) = alert_rx.recv() => {
                 if let Some(record) = engine.process_alert(&alert) {
+                    if cli.json_stdout {
+                        if let Ok(json) = serde_json::to_string(&record) {
+                            println!("{}", json);
+                        }
+                    }
+
                     // Auto-detach response: track suspicious prog IDs
                     if alert.alert_type == ALERT_PROG_INVENTORY
                         || alert.alert_type == ALERT_SUSPICIOUS_HOOK
