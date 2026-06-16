@@ -4,8 +4,7 @@ use aya_ebpf::{
     programs::{ProbeContext, RetProbeContext},
 };
 use common::{
-    EventHeader, EVENT_ANTI_DETACH, EVENT_BYTECODE_WIPED, EVENT_CONTAINER_PROBE,
-    EVENT_MEMFD_STAGED,
+    EventHeader, EVENT_ANTI_DETACH, EVENT_BYTECODE_WIPED, EVENT_CONTAINER_PROBE, EVENT_MEMFD_STAGED,
 };
 
 use crate::maps::*;
@@ -158,7 +157,7 @@ pub fn shadow_wipe_check(ctx: ProbeContext) -> u32 {
     try_wipe_check(&ctx).unwrap_or_default()
 }
 
-fn try_wipe_check(ctx: &ProbeContext) -> Result<u32, i64> {
+fn try_wipe_check(_ctx: &ProbeContext) -> Result<u32, i64> {
     if let Some(flag) = unsafe { WIPE_FLAG.get(0) } {
         if *flag != 0 {
             let pid_tgid = bpf_get_current_pid_tgid();

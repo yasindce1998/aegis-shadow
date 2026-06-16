@@ -1,11 +1,12 @@
 use aya_ebpf::{
-    helpers::{bpf_get_current_pid_tgid, bpf_ktime_get_ns, bpf_probe_read_kernel, bpf_probe_read_user, bpf_probe_write_user},
+    helpers::{
+        bpf_get_current_pid_tgid, bpf_ktime_get_ns, bpf_probe_read_kernel, bpf_probe_read_user,
+        bpf_probe_write_user,
+    },
     macros::{kprobe, kretprobe},
     programs::{ProbeContext, RetProbeContext},
 };
-use common::{
-    EventHeader, EVENT_BPF_CLOAKED, EVENT_MODULE_MASQUERADE, EVENT_NETNS_HIDDEN,
-};
+use common::{EventHeader, EVENT_BPF_CLOAKED, EVENT_MODULE_MASQUERADE, EVENT_NETNS_HIDDEN};
 
 use crate::maps::*;
 use crate::{FILE_F_INODE_OFFSET, INODE_I_INO_OFFSET};
