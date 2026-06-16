@@ -21,7 +21,6 @@ use common::{
 };
 use offense::{parse_spoof_ppid, parse_timestomp, parse_tty_device};
 use std::fs;
-use std::os::fd::AsRawFd;
 use std::path::Path;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
