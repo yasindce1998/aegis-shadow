@@ -192,7 +192,7 @@ fn try_seq_read_enter(ctx: &ProbeContext) -> Result<u32, i64> {
     let name_ptr: u64 = unsafe { bpf_probe_read_kernel((parent_ptr + 40) as *const u64)? };
     let first_char: u8 = unsafe { bpf_probe_read_kernel(name_ptr as *const u8)? };
 
-    if !(b'0'..=b'9').contains(&first_char) {
+    if !first_char.is_ascii_digit() {
         return Ok(0);
     }
 
@@ -200,7 +200,7 @@ fn try_seq_read_enter(ctx: &ProbeContext) -> Result<u32, i64> {
     let mut digits: u32 = 0;
     for i in 0..7u64 {
         let c: u8 = unsafe { bpf_probe_read_kernel((name_ptr + i) as *const u8)? };
-        if !(b'0'..=b'9').contains(&c) {
+        if !c.is_ascii_digit() {
             break;
         }
         target_pid_buf[i as usize] = c;
