@@ -1325,10 +1325,7 @@ fn log_event(event: &EventHeader) {
             );
         }
         EVENT_ARP_POISONED => {
-            info!(
-                "ARP poisoned: target_ip=0x{:08x}",
-                event.context as u32
-            );
+            info!("ARP poisoned: target_ip=0x{:08x}", event.context as u32);
         }
         EVENT_PORT_KNOCK_AUTH => {
             warn!(
@@ -1349,10 +1346,7 @@ fn log_event(event: &EventHeader) {
             );
         }
         EVENT_PMC_COVERT => {
-            debug!(
-                "PMC covert data: PID={}, val={}",
-                event.pid, event.context
-            );
+            debug!("PMC covert data: PID={}, val={}", event.pid, event.context);
         }
         EVENT_TSC_SIDECHAN => {
             warn!(
