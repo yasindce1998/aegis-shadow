@@ -1,6 +1,9 @@
 use common::{
-    DefenseAlert, ALERT_BYTECODE_TAMPER, ALERT_GHOST_MAP, ALERT_HIDDEN_PROCESS,
-    ALERT_SUSPICIOUS_HOOK, ALERT_SYSCALL_LATENCY,
+    DefenseAlert, ALERT_AUTO_DETACH, ALERT_BYTECODE_TAMPER, ALERT_CONTAINMENT,
+    ALERT_CROSS_REFERENCE, ALERT_GHOST_MAP, ALERT_HIDDEN_PROCESS, ALERT_HONEYPOT_READ,
+    ALERT_HW_PERF_COUNTER, ALERT_MAP_AUDIT, ALERT_MEMFD_EXEC, ALERT_MEMORY_FORENSICS,
+    ALERT_NET_BASELINE, ALERT_PROG_INVENTORY, ALERT_SUSPICIOUS_HOOK, ALERT_SYSCALL_ANOMALY,
+    ALERT_SYSCALL_LATENCY, ALERT_TRACEPOINT_GAP, ALERT_VERIFIER_ANALYSIS,
 };
 use defense::{
     classify_alert_type, classify_severity, format_alert_details, make_defense_alert,
@@ -30,6 +33,52 @@ fn test_classify_all_alert_types() {
         classify_alert_type(ALERT_SUSPICIOUS_HOOK),
         "Suspicious Hook Detected"
     );
+    assert_eq!(
+        classify_alert_type(ALERT_PROG_INVENTORY),
+        "Program Inventory Gap"
+    );
+    assert_eq!(
+        classify_alert_type(ALERT_SYSCALL_ANOMALY),
+        "Syscall Argument Anomaly"
+    );
+    assert_eq!(
+        classify_alert_type(ALERT_NET_BASELINE),
+        "Network Behavior Anomaly"
+    );
+    assert_eq!(
+        classify_alert_type(ALERT_MEMFD_EXEC),
+        "Memory-Backed Execution"
+    );
+    assert_eq!(classify_alert_type(ALERT_MAP_AUDIT), "BPF Map C2 Signature");
+    assert_eq!(
+        classify_alert_type(ALERT_TRACEPOINT_GAP),
+        "Rapid BPF Detach"
+    );
+    assert_eq!(
+        classify_alert_type(ALERT_AUTO_DETACH),
+        "Auto-Detach Triggered"
+    );
+    assert_eq!(classify_alert_type(ALERT_CONTAINMENT), "Process Contained");
+    assert_eq!(
+        classify_alert_type(ALERT_HONEYPOT_READ),
+        "Honeypot Map Accessed"
+    );
+    assert_eq!(
+        classify_alert_type(ALERT_CROSS_REFERENCE),
+        "Cross-Reference Anomaly"
+    );
+    assert_eq!(
+        classify_alert_type(ALERT_HW_PERF_COUNTER),
+        "HW Perf Counter Deviation"
+    );
+    assert_eq!(
+        classify_alert_type(ALERT_VERIFIER_ANALYSIS),
+        "Suspicious BPF Program"
+    );
+    assert_eq!(
+        classify_alert_type(ALERT_MEMORY_FORENSICS),
+        "Kernel Data Tampering"
+    );
     assert_eq!(classify_alert_type(999), "Unknown Alert");
 }
 
@@ -43,6 +92,158 @@ fn test_classify_severity_levels() {
     assert_eq!(classify_severity(4), "CRITICAL");
     assert_eq!(classify_severity(0), "UNKNOWN");
     assert_eq!(classify_severity(5), "UNKNOWN");
+}
+
+// ─── Format Alert Details (All Types) ────────────────────────────
+
+#[test]
+fn test_format_ghost_map_details() {
+    let mut alert = make_defense_alert(ALERT_GHOST_MAP, 3, 100, 1000, 77);
+    alert.details[..8].copy_from_slice(&5u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "map_id=77, suspicious_ops=5");
+}
+
+#[test]
+fn test_format_latency_alert_details() {
+    let alert = make_latency_alert(500, 10000, 217, 5_000_000);
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "syscall=217, latency=5000000ns");
+}
+
+#[test]
+fn test_format_bytecode_tamper_details() {
+    let mut alert = make_defense_alert(ALERT_BYTECODE_TAMPER, 4, 100, 42, 0);
+    alert.details[..8].copy_from_slice(&0xDEADu64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "prog_id=42, checksum_delta=57005");
+}
+
+#[test]
+fn test_format_hidden_process_details() {
+    let mut alert = make_defense_alert(ALERT_HIDDEN_PROCESS, 4, 100, 1337, 0);
+    alert.details[..8].copy_from_slice(&1u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "hidden_pid=1337, parent=1");
+}
+
+#[test]
+fn test_format_suspicious_hook_details() {
+    let mut alert = make_defense_alert(ALERT_SUSPICIOUS_HOOK, 3, 100, 0xFFFF0000, 0);
+    alert.details[..8].copy_from_slice(&99u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "hook_addr=0xffff0000, target=99");
+}
+
+#[test]
+fn test_format_prog_inventory_details() {
+    let mut alert = make_defense_alert(ALERT_PROG_INVENTORY, 2, 100, 15, 0);
+    alert.details[..8].copy_from_slice(&10u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "prog_count=15, expected=10");
+}
+
+#[test]
+fn test_format_syscall_anomaly_details() {
+    let mut alert = make_defense_alert(ALERT_SYSCALL_ANOMALY, 3, 100, 59, 0);
+    alert.details[..8].copy_from_slice(&300u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "syscall=59, deviation=300");
+}
+
+#[test]
+fn test_format_net_baseline_details() {
+    let mut alert = make_defense_alert(ALERT_NET_BASELINE, 2, 100, 1048576, 0);
+    alert.details[..8].copy_from_slice(&524288u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "bytes=1048576, threshold=524288");
+}
+
+#[test]
+fn test_format_memfd_exec_details() {
+    let mut alert = make_defense_alert(ALERT_MEMFD_EXEC, 4, 100, 7, 0);
+    alert.details[..8].copy_from_slice(&500u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "fd=7, pid=500");
+}
+
+#[test]
+fn test_format_map_audit_details() {
+    let mut alert = make_defense_alert(ALERT_MAP_AUDIT, 3, 100, 3, 0);
+    alert.details[..8].copy_from_slice(&2u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "map_id=3, violations=2");
+}
+
+#[test]
+fn test_format_tracepoint_gap_details() {
+    let mut alert = make_defense_alert(ALERT_TRACEPOINT_GAP, 3, 100, 500, 0);
+    alert.details[..8].copy_from_slice(&100u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "gap_ms=500, expected_interval=100");
+}
+
+#[test]
+fn test_format_auto_detach_details() {
+    let mut alert = make_defense_alert(ALERT_AUTO_DETACH, 4, 100, 42, 0);
+    alert.details[..8].copy_from_slice(&1u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "prog_id=42, attach_type=1");
+}
+
+#[test]
+fn test_format_containment_details() {
+    let mut alert = make_defense_alert(ALERT_CONTAINMENT, 4, 100, 1337, 0);
+    alert.details[..8].copy_from_slice(&2u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "target_pid=1337, action=2");
+}
+
+#[test]
+fn test_format_honeypot_read_details() {
+    let mut alert = make_defense_alert(ALERT_HONEYPOT_READ, 3, 100, 5, 0);
+    alert.details[..8].copy_from_slice(&999u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "map_id=5, accessor_pid=999");
+}
+
+#[test]
+fn test_format_cross_reference_details() {
+    let mut alert = make_defense_alert(ALERT_CROSS_REFERENCE, 3, 100, 7, 0);
+    alert.details[..8].copy_from_slice(&3u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "discrepancy=7, source_a=3");
+}
+
+#[test]
+fn test_format_hw_perf_counter_details() {
+    let mut alert = make_defense_alert(ALERT_HW_PERF_COUNTER, 2, 100, 4, 0);
+    alert.details[..8].copy_from_slice(&150u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "counter=4, deviation=150");
+}
+
+#[test]
+fn test_format_verifier_analysis_details() {
+    let mut alert = make_defense_alert(ALERT_VERIFIER_ANALYSIS, 3, 100, 88, 0);
+    alert.details[..8].copy_from_slice(&1024u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "prog_id=88, complexity=1024");
+}
+
+#[test]
+fn test_format_memory_forensics_details() {
+    let mut alert = make_defense_alert(ALERT_MEMORY_FORENSICS, 4, 100, 0xFFFF8000, 0);
+    alert.details[..8].copy_from_slice(&42u64.to_le_bytes());
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "region=0xffff8000, checksum_delta=42");
+}
+
+#[test]
+fn test_format_unknown_alert_fallback() {
+    let alert = make_defense_alert(999, 2, 100, 12345, 0);
+    let details = format_alert_details(&alert);
+    assert_eq!(details, "context=12345");
 }
 
 // ─── Threshold Filtering ──────────────────────────────────────────
@@ -113,6 +314,28 @@ fn test_alert_counting_respects_threshold() {
     assert_eq!(engine.total_alerts(), 1);
 }
 
+#[test]
+fn test_alert_counting_all_types() {
+    let mut engine = DefenseEngine::new(None, 1).unwrap();
+    let base_ts = 1_000_000_000u64;
+
+    for alert_type in 1..=18u32 {
+        let alert = make_defense_alert(
+            alert_type,
+            2,
+            100 + alert_type,
+            base_ts + alert_type as u64 * 1000,
+            0,
+        );
+        engine.process_alert(&alert);
+    }
+
+    assert_eq!(engine.total_alerts(), 18);
+    for alert_type in 1..=18u32 {
+        assert_eq!(engine.alerts_by_type(alert_type), 1);
+    }
+}
+
 // ─── Alert Record Construction ────────────────────────────────────
 
 #[test]
@@ -126,7 +349,23 @@ fn test_alert_record_fields() {
     assert_eq!(record.severity, "CRITICAL");
     assert_eq!(record.pid, 1337);
     assert_eq!(record.context, 42);
-    assert_eq!(record.details, "context=42");
+}
+
+#[test]
+fn test_alert_record_for_advanced_types() {
+    let mut engine = DefenseEngine::new(None, 1).unwrap();
+
+    let alert = make_defense_alert(ALERT_MEMORY_FORENSICS, 4, 500, 12345, 0xDEAD);
+    let record = engine.process_alert(&alert).unwrap();
+    assert_eq!(record.alert_type, "Kernel Data Tampering");
+    assert_eq!(record.severity, "CRITICAL");
+    assert_eq!(record.pid, 500);
+    assert_eq!(record.context, 0xDEAD);
+
+    let alert = make_defense_alert(ALERT_VERIFIER_ANALYSIS, 3, 600, 67890, 88);
+    let record = engine.process_alert(&alert).unwrap();
+    assert_eq!(record.alert_type, "Suspicious BPF Program");
+    assert_eq!(record.severity, "HIGH");
 }
 
 // ─── Latency Alert Details ────────────────────────────────────────
@@ -143,13 +382,6 @@ fn test_latency_alert_large_values() {
     let alert = make_latency_alert(1, 0, 0, u64::MAX);
     let details = format_alert_details(&alert);
     assert!(details.contains(&u64::MAX.to_string()));
-}
-
-#[test]
-fn test_non_latency_alert_details() {
-    let alert = make_defense_alert(ALERT_GHOST_MAP, 3, 100, 1000, 77);
-    let details = format_alert_details(&alert);
-    assert_eq!(details, "context=77");
 }
 
 // ─── Calibration State ────────────────────────────────────────────
@@ -255,6 +487,29 @@ fn test_process_many_alerts() {
     assert_eq!(engine.alerts_by_type(ALERT_BYTECODE_TAMPER), 200);
     assert_eq!(engine.alerts_by_type(ALERT_HIDDEN_PROCESS), 200);
     assert_eq!(engine.alerts_by_type(ALERT_SUSPICIOUS_HOOK), 200);
+}
+
+#[test]
+fn test_process_all_alert_types_burst() {
+    let mut engine = DefenseEngine::new(None, 1).unwrap();
+
+    for round in 0..50u64 {
+        for alert_type in 1..=18u32 {
+            let alert = make_defense_alert(
+                alert_type,
+                2,
+                alert_type * 100,
+                round * 18 + alert_type as u64,
+                0,
+            );
+            engine.process_alert(&alert);
+        }
+    }
+
+    assert_eq!(engine.total_alerts(), 900);
+    for alert_type in 1..=18u32 {
+        assert_eq!(engine.alerts_by_type(alert_type), 50);
+    }
 }
 
 // ─── Sliding Window Eviction ─────────────────────────────────────
@@ -369,6 +624,48 @@ fn test_attack_chain_detection() {
     assert!(record
         .correlated_types
         .contains(&"Suspicious Hook Detected".to_string()));
+}
+
+#[test]
+fn test_attack_chain_with_advanced_alerts() {
+    let mut engine = DefenseEngine::new(None, 1).unwrap();
+    let pid = 888u32;
+    let base_ts = 1_000_000_000u64;
+
+    engine.process_alert(&make_defense_alert(
+        ALERT_MEMORY_FORENSICS,
+        4,
+        pid,
+        base_ts,
+        0,
+    ));
+    engine.process_alert(&make_defense_alert(
+        ALERT_VERIFIER_ANALYSIS,
+        3,
+        pid,
+        base_ts + 1000,
+        0,
+    ));
+    let record = engine.process_alert(&make_defense_alert(
+        ALERT_HW_PERF_COUNTER,
+        3,
+        pid,
+        base_ts + 2000,
+        0,
+    ));
+
+    let record = record.unwrap();
+    assert!(record.is_attack_chain);
+    assert_eq!(record.correlated_types.len(), 3);
+    assert!(record
+        .correlated_types
+        .contains(&"Kernel Data Tampering".to_string()));
+    assert!(record
+        .correlated_types
+        .contains(&"Suspicious BPF Program".to_string()));
+    assert!(record
+        .correlated_types
+        .contains(&"HW Perf Counter Deviation".to_string()));
 }
 
 #[test]

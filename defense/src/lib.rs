@@ -556,20 +556,36 @@ pub fn classify_severity(severity: u32) -> &'static str {
 }
 
 pub fn format_alert_details(alert: &DefenseAlert) -> String {
-    if alert.alert_type == ALERT_SYSCALL_LATENCY {
-        let latency_ns = u64::from_le_bytes([
-            alert.details[0],
-            alert.details[1],
-            alert.details[2],
-            alert.details[3],
-            alert.details[4],
-            alert.details[5],
-            alert.details[6],
-            alert.details[7],
-        ]);
-        format!("syscall={}, latency={}ns", alert.context, latency_ns)
-    } else {
-        format!("context={}", alert.context)
+    let detail_u64 = u64::from_le_bytes([
+        alert.details[0],
+        alert.details[1],
+        alert.details[2],
+        alert.details[3],
+        alert.details[4],
+        alert.details[5],
+        alert.details[6],
+        alert.details[7],
+    ]);
+    match alert.alert_type {
+        ALERT_GHOST_MAP => format!("map_id={}, suspicious_ops={}", alert.context, detail_u64),
+        ALERT_SYSCALL_LATENCY => format!("syscall={}, latency={}ns", alert.context, detail_u64),
+        ALERT_BYTECODE_TAMPER => format!("prog_id={}, checksum_delta={}", alert.context, detail_u64),
+        ALERT_HIDDEN_PROCESS => format!("hidden_pid={}, parent={}", alert.context, detail_u64),
+        ALERT_SUSPICIOUS_HOOK => format!("hook_addr=0x{:x}, target={}", alert.context, detail_u64),
+        ALERT_PROG_INVENTORY => format!("prog_count={}, expected={}", alert.context, detail_u64),
+        ALERT_SYSCALL_ANOMALY => format!("syscall={}, deviation={}", alert.context, detail_u64),
+        ALERT_NET_BASELINE => format!("bytes={}, threshold={}", alert.context, detail_u64),
+        ALERT_MEMFD_EXEC => format!("fd={}, pid={}", alert.context, detail_u64),
+        ALERT_MAP_AUDIT => format!("map_id={}, violations={}", alert.context, detail_u64),
+        ALERT_TRACEPOINT_GAP => format!("gap_ms={}, expected_interval={}", alert.context, detail_u64),
+        ALERT_AUTO_DETACH => format!("prog_id={}, attach_type={}", alert.context, detail_u64),
+        ALERT_CONTAINMENT => format!("target_pid={}, action={}", alert.context, detail_u64),
+        ALERT_HONEYPOT_READ => format!("map_id={}, accessor_pid={}", alert.context, detail_u64),
+        ALERT_CROSS_REFERENCE => format!("discrepancy={}, source_a={}", alert.context, detail_u64),
+        ALERT_HW_PERF_COUNTER => format!("counter={}, deviation={}", alert.context, detail_u64),
+        ALERT_VERIFIER_ANALYSIS => format!("prog_id={}, complexity={}", alert.context, detail_u64),
+        ALERT_MEMORY_FORENSICS => format!("region=0x{:x}, checksum_delta={}", alert.context, detail_u64),
+        _ => format!("context={}", alert.context),
     }
 }
 
