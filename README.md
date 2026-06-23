@@ -1,6 +1,8 @@
 <div align="center">
 
-![Aegis-Shadow Logo](assets/logo.svg)
+<img src="assets/logo.svg" width="120" alt="Aegis-Shadow"/>
+
+# AEGIS-SHADOW
 
 [![License](https://img.shields.io/badge/license-Educational-red.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-nightly-orange.svg)](https://www.rust-lang.org/)
